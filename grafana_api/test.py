@@ -1,7 +1,10 @@
 #!/usr/local/bin/python3
 
-import web_api
+import argparse
+from web_api import api_get
 import logging
+import json
+import pprint
 
 # Module level resources
 logr = logging.getLogger( __name__ )
@@ -36,10 +39,48 @@ def get_args( params=None ):
     return resources[key]
 
 
-def run():
-    pass
-    
+def get_warnings():
+    key = 'errs'
+    if key not in resources:
+        resources[key] = []
+    return resources[key]
 
+
+def warn( msg ):
+    ''' Log an warning to the screen and,
+        Also save it in an array for later retrieval of all warnings.
+    '''
+    key = 'errs'
+    if key not in resources:
+        resources[key] = []
+    resources[key].append( msg )
+    logging.warning( msg )
+
+
+def get_errors():
+    key = 'errs'
+    if key not in resources:
+        resources[key] = []
+    return resources[key]
+
+
+def err( msg ):
+    ''' Log an error to the screen and,
+        Also save it in an array for later retrieval of all errors.
+    '''
+    key = 'errs'
+    if key not in resources:
+        resources[key] = []
+    resources[key].append( msg )
+    logging.error( msg )
+
+
+def run():
+    # Simple connect test using dashboard search api
+    path = 'search'
+    r = api_get( path )
+    pprint.pprint( r.json() )
+    
 if __name__ == "__main__":
     args = get_args()
 
@@ -57,3 +98,4 @@ if __name__ == "__main__":
 
     # start processing
     run()
+

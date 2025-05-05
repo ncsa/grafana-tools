@@ -1,26 +1,17 @@
 import configparser
-import json
 import logging
 import netrc
 import os
 import pprint
 import requests
-import requests.exceptions
+# import requests.exceptions
 
 # from http.client import HTTPConnection
 # HTTPConnection.debuglevel = 1
 
-logfmt = '%(levelname)s:%(funcName)s[%(lineno)d] %(message)s'
-loglvl = logging.INFO
-#loglvl = logging.DEBUG
-#logging.basicConfig( level=loglvl, format=logfmt )
-
-# requests_log = logging.getLogger("urllib3")
-# requests_log.setLevel(loglvl)
-# requests_log.propagate = True
-
-
-resources = {} # module level resources
+# Module level resources
+logr = logging.getLogger( __name__ )
+resources = {}
 
 
 def get_session():
@@ -33,28 +24,53 @@ def get_session():
 def get_config():
     key = 'cfg'
     if key not in resources:
-        envvar = 'JIRA_TOOLS_CONFIG'
-        default_fn = '~/.config/jira-tools/config.ini'
-        conf_file = os.getenv( envvar, default_fn )
-        # try:
-        #     conf_file = os.environ[ envvar ]
-        # except KeyError as e:
-        #     logging.error( f"Env var '{envvar}' must be set" )
-        #     raise SystemExit( 1 )
+        env_name = 'GRAFANA_API_CONFIG'
+        conf_files = [
+            './conf/config.ini',
+            '~/.config/grafana-tools/config.ini',
+            ]
+        env_file = os.getenv( env_name )
+        if env_file:
+            conf_files.append( env_file )
         cfg = configparser.ConfigParser( allow_no_value=True )
         cfg.optionxform = str
-        cfg.read( conf_file )
+        cfg.read( conf_files )
         resources[key] = cfg
+    return resources[key]
+
+
+def get_server_info():
+    key = 'server_info'
+    config = get_config()
+    if key not in resources:
+        server = config['server']
+        resources[key] = server
+        resources['server'] = server['host']
+        resources['port'] = server['port']
+        resources['scheme'] = server['scheme']
     return resources[key]
 
 
 def get_server():
     key = 'server'
-    config = get_config()
     if key not in resources:
-        server = config['server']['server']
-        resources[key] = server
+        get_server_info()
     return resources[key]
+
+
+def get_scheme():
+    key = 'scheme'
+    if key not in resources:
+        get_server_info()
+    return resources[key]
+
+
+def get_port():
+    key = 'port'
+    if key not in resources:
+        get_server_info()
+    return resources[key]
+
 
 
 def get_netrc():
@@ -92,59 +108,13 @@ def get_password():
     return resources[key]
 
 
-def get_warnings():
-    key = 'errs'
-    if key not in resources:
-        resources[key] = []
-    return resources[key]
-
-
-def warn( msg ):
-    ''' Log an warning to the screen and,
-        Also save it in an array for later retrieval of all warnings.
-    '''
-    key = 'errs'
-    if key not in resources:
-        resources[key] = []
-    resources[key].append( msg )
-    logging.warning( msg )
-
-
-def get_errors():
-    key = 'errs'
-    if key not in resources:
-        resources[key] = []
-    return resources[key]
-
-
-def err( msg ):
-    ''' Log an error to the screen and,
-        Also save it in an array for later retrieval of all errors.
-    '''
-    key = 'errs'
-    if key not in resources:
-        resources[key] = []
-    resources[key].append( msg )
-    logging.error( msg )
-
-
-def get_role_id( name ):
-    key = 'roles'
-    if key not in resources:
-        path = f'role'
-        r = api_get( path )
-        rawdata = r.json()
-        resources[key] =  { d['name']: d['id'] for d in rawdata }
-    return resources[key][name]
-
-
 def api_go( method, path, version='latest', **kw ):
     srv_info = get_server()
-    scheme = srv_info['scheme']
-    server = srv_info['server']
-    port = srv_info['port']
-    url = f'https://{get_server()}/rest/api/{version}/{path}'
-    logging.debug( f'{method} {path}, {pprint.pformat(kw)}' )
+    scheme = get_scheme()
+    server = get_server()
+    port = get_port()
+    url = f'{scheme}://{server}:{port}/api/{path}'
+    logr.debug( f'{method} {path}, {pprint.pformat(kw)}' )
     s = get_session()
     # to use personal access token, must disable netrc function in requests
     s.trust_env = False
@@ -155,8 +125,8 @@ def api_go( method, path, version='latest', **kw ):
         "Authorization": f"Bearer {token}",
         }
     r = s.request( method, url, **kw )
-    logging.debug( f'RETURN CODE .. {r}' )
-    # logging.debug( f'RETURN HEADERS .. {r.headers}' )
+    logr.debug( f'RETURN CODE .. {r}' )
+    # llogr.debug( f'RETURN HEADERS .. {r.headers}' )
     r.raise_for_status()
     return r
 
@@ -178,7 +148,6 @@ def api_post( path, data):
 
 def api_put( path, data ):
     return api_go( 'PUT', path, json=data )
-
 
 
 if __name__ == '__main__':
