@@ -1,7 +1,7 @@
 #!/usr/local/bin/python3
 
 import argparse
-from web_api import api_get
+from web_api import api_get, api_go
 import logging
 import json
 import pprint
@@ -77,9 +77,33 @@ def err( msg ):
 
 def run():
     # Simple connect test using dashboard search api
-    path = 'search'
+    # path = 'search'
+    # r = api_get( path )
+    # pprint.pprint( r.json() )
+
+    # Get folders
+    # path = 'folders'
+    # r = api_get( path, version='' )
+    # # pprint.pprint( r.json() )
+    # folders = {}
+    # for folder in r.json():
+    #     title = folder['title']
+    #     folders[title] = folder
+
+    # Get alerts
+    path = 'provisioning/alert-rules'
     r = api_get( path )
-    pprint.pprint( r.json() )
+    # pprint.pprint( r.json() )
+    # f_uid = folders['ASD']['uid']
+    for alert in r.json():
+        # if alert['folderUID'] == f_uid:
+        #     pprint.pprint( alert['title'] )
+        # pprint.pprint( alert['title'] )
+        title = alert['title']
+        if title.startswith( '[ASD] ' ):
+            print( f'--- {title} ---' )
+            pprint.pprint( alert )
+
     
 if __name__ == "__main__":
     args = get_args()

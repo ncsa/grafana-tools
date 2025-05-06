@@ -6,8 +6,8 @@ import pprint
 import requests
 # import requests.exceptions
 
-# from http.client import HTTPConnection
-# HTTPConnection.debuglevel = 1
+from http.client import HTTPConnection
+HTTPConnection.debuglevel = 1
 
 # Module level resources
 logr = logging.getLogger( __name__ )
@@ -41,8 +41,8 @@ def get_config():
 
 def get_server_info():
     key = 'server_info'
-    config = get_config()
     if key not in resources:
+        config = get_config()
         server = config['server']
         resources[key] = server
         resources['server'] = server['host']
@@ -77,7 +77,6 @@ def get_netrc():
     key = 'netrc'
     if key not in resources:
         n = netrc.netrc()
-        # n = netrc.netrc('/root/netrcfile')
         server = get_server()
         (login, account, password) = n.authenticators( server )
         resources['login'] = login
@@ -108,12 +107,12 @@ def get_password():
     return resources[key]
 
 
-def api_go( method, path, version='latest', **kw ):
-    srv_info = get_server()
+def api_go( method, path, version='v1', **kw ):
+    # srv_info = get_server()
     scheme = get_scheme()
     server = get_server()
     port = get_port()
-    url = f'{scheme}://{server}:{port}/api/{path}'
+    url = f'{scheme}://{server}:{port}/api/{version}/{path}'
     logr.debug( f'{method} {path}, {pprint.pformat(kw)}' )
     s = get_session()
     # to use personal access token, must disable netrc function in requests
@@ -131,8 +130,8 @@ def api_go( method, path, version='latest', **kw ):
     return r
 
 
-def api_get( path, params=None ):
-    return api_go( 'GET', path, params=params )
+def api_get( path, params=None, **kw ):
+    return api_go( 'GET', path, params=params, **kw )
 
 
 def api_delete( path, data=None ):

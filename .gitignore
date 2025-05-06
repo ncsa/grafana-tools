@@ -3,6 +3,7 @@
 *.dump
 *.out
 *.raw.js
+*.json
 TODO
 output
 
